@@ -5,8 +5,7 @@ var path = require('path');
 var fs = require('fs');
 var tmp = common.tmpDir;
 var filename = path.resolve(tmp, 'truncate-file.txt');
-var data = new Buffer(1024 * 16);
-data.fill('x');
+var data = Buffer.alloc(1024 * 16, 'x');
 
 common.refreshTmpDir();
 
@@ -43,20 +42,12 @@ assert.equal(stat.size, 0);
 fs.closeSync(fd);
 
 // async tests
-var success = 0;
-testTruncate(function(er) {
+testTruncate(common.mustCall(function(er) {
   if (er) throw er;
-  success++;
-  testFtruncate(function(er) {
+  testFtruncate(common.mustCall(function(er) {
     if (er) throw er;
-    success++;
-  });
-});
-
-process.on('exit', function() {
-  assert.equal(success, 2);
-  console.log('ok');
-});
+  }));
+}));
 
 function testTruncate(cb) {
   fs.writeFile(filename, data, function(er) {

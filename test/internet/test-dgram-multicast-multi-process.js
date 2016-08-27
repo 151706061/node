@@ -6,10 +6,10 @@ const fork = require('child_process').fork;
 const LOCAL_BROADCAST_HOST = '224.0.0.114';
 const TIMEOUT = common.platformTimeout(5000);
 const messages = [
-  new Buffer('First message to send'),
-  new Buffer('Second message to send'),
-  new Buffer('Third message to send'),
-  new Buffer('Fourth message to send')
+  Buffer.from('First message to send'),
+  Buffer.from('Second message to send'),
+  Buffer.from('Third message to send'),
+  Buffer.from('Fourth message to send')
 ];
 const workers = {};
 const listeners = 3;
@@ -17,7 +17,7 @@ const listeners = 3;
 
 // Skip test in FreeBSD jails.
 if (common.inFreeBSDJail) {
-  console.log('1..0 # Skipped: In a FreeBSD jail');
+  common.skip('In a FreeBSD jail');
   return;
 }
 
@@ -91,7 +91,7 @@ function launchChildProcess(index) {
                         worker.pid, count);
 
           assert.strictEqual(count, messages.length,
-                       'A worker received an invalid multicast message');
+                             'A worker received an invalid multicast message');
         });
 
         clearTimeout(timer);

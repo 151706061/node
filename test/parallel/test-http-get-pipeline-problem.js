@@ -1,11 +1,13 @@
 'use strict';
-// We are demonstrating a problem with http.get when queueing up many
-// transfers. The server simply introduces some delay and sends a file.
-// Note this is demonstrated with connection: close.
+// In previous versions of Node.js (e.g., 0.6.0), this sort of thing would halt
+// after http.globalAgent.maxSockets number of files.
+// See https://groups.google.com/forum/#!topic/nodejs-dev/V5fB69hFa9o
 var common = require('../common');
 var assert = require('assert');
 var http = require('http');
 var fs = require('fs');
+
+http.globalAgent.maxSockets = 1;
 
 common.refreshTmpDir();
 
@@ -13,11 +15,11 @@ var image = fs.readFileSync(common.fixturesDir + '/person.jpg');
 
 console.log('image.length = ' + image.length);
 
-var total = 100;
+var total = 10;
 var requests = 0, responses = 0;
 
 var server = http.Server(function(req, res) {
-  if (++requests == total) {
+  if (++requests === total) {
     server.close();
   }
 
@@ -32,13 +34,13 @@ var server = http.Server(function(req, res) {
 });
 
 
-server.listen(common.PORT, function() {
+server.listen(0, function() {
   for (var i = 0; i < total; i++) {
     (function() {
       var x = i;
 
       var opts = {
-        port: common.PORT,
+        port: server.address().port,
         headers: { connection: 'close' }
       };
 
@@ -49,7 +51,7 @@ server.listen(common.PORT, function() {
 
         s.on('finish', function() {
           console.error('done ' + x);
-          if (++responses == total) {
+          if (++responses === total) {
             checkFiles();
           }
         });

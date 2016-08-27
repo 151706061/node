@@ -6,7 +6,7 @@ var dgram = require('dgram');
 var dns = require('dns');
 
 var socket = dgram.createSocket('udp4');
-var buffer = new Buffer('gary busey');
+var buffer = Buffer.from('gary busey');
 
 dns.setServers([]);
 
@@ -28,7 +28,7 @@ function callbackOnly(err) {
 }
 
 function onEvent(err) {
-  assert.fail(null, null, 'Error should not be emitted if there is callback');
+  common.fail('Error should not be emitted if there is callback');
 }
 
 function onError(err) {

@@ -1,6 +1,6 @@
 'use strict';
 
-const common = require('../common');
+require('../common');
 const assert = require('assert');
 const net = require('net');
 const async_wrap = process.binding('async_wrap');
@@ -9,7 +9,6 @@ const providers = Object.keys(async_wrap.Providers);
 const uidSymbol = Symbol('uid');
 
 let cntr = 0;
-let server;
 let client;
 
 function init(uid, type, parentUid, parentHandle) {
@@ -31,18 +30,18 @@ function init(uid, type, parentUid, parentHandle) {
 
 function noop() { }
 
-async_wrap.setupHooks(init, noop, noop);
+async_wrap.setupHooks({ init });
 async_wrap.enable();
 
-server = net.createServer(function(c) {
+const server = net.createServer(function(c) {
   client = c;
   // Allow init callback to run before closing.
   setImmediate(() => {
     c.end();
     this.close();
   });
-}).listen(common.PORT, function() {
-  net.connect(common.PORT, noop);
+}).listen(0, function() {
+  net.connect(this.address().port, noop);
 });
 
 

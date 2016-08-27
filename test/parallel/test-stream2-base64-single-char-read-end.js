@@ -1,5 +1,5 @@
 'use strict';
-require('../common');
+const common = require('../common');
 var R = require('_stream_readable');
 var W = require('_stream_writable');
 var assert = require('assert');
@@ -14,7 +14,7 @@ src._read = function(n) {
   if (!hasRead) {
     hasRead = true;
     process.nextTick(function() {
-      src.push(new Buffer('1'));
+      src.push(Buffer.from('1'));
       src.push(null);
     });
   }
@@ -33,5 +33,5 @@ src.on('end', function() {
 src.pipe(dst);
 
 timeout = setTimeout(function() {
-  assert.fail(null, null, 'timed out waiting for _write');
+  common.fail('timed out waiting for _write');
 }, 100);

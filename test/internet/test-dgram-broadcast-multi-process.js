@@ -9,18 +9,20 @@ const fork = require('child_process').fork;
 const LOCAL_BROADCAST_HOST = '255.255.255.255';
 const TIMEOUT = common.platformTimeout(5000);
 const messages = [
-  new Buffer('First message to send'),
-  new Buffer('Second message to send'),
-  new Buffer('Third message to send'),
-  new Buffer('Fourth message to send')
+  Buffer.from('First message to send'),
+  Buffer.from('Second message to send'),
+  Buffer.from('Third message to send'),
+  Buffer.from('Fourth message to send')
 ];
 
 if (common.inFreeBSDJail) {
-  console.log('1..0 # Skipped: in a FreeBSD jail');
+  common.skip('in a FreeBSD jail');
   return;
 }
 
-// take the first non-internal interface as the address for binding
+// Take the first non-internal interface as the address for binding.
+// Ideally, this should check for whether or not an interface is set up for
+// BROADCAST and favor internal/private interfaces.
 get_bindAddress: for (var name in networkInterfaces) {
   var interfaces = networkInterfaces[name];
   for (var i = 0; i < interfaces.length; i++) {
@@ -94,8 +96,7 @@ if (process.argv[2] !== 'child') {
             //all child process are listening, so start sending
             sendSocket.sendNext();
           }
-        }
-        else if (msg.message) {
+        } else if (msg.message) {
           worker.messagesReceived.push(msg.message);
 
           if (worker.messagesReceived.length === messages.length) {
@@ -209,7 +210,7 @@ if (process.argv[2] === 'child') {
 
     receivedMessages.push(buf);
 
-    process.send({ message: buf.toString() });
+    process.send({message: buf.toString()});
 
     if (receivedMessages.length == messages.length) {
       process.nextTick(function() {
@@ -228,7 +229,7 @@ if (process.argv[2] === 'child') {
   });
 
   listenSocket.on('listening', function() {
-    process.send({ listening: true });
+    process.send({listening: true});
   });
 
   listenSocket.bind(common.PORT);

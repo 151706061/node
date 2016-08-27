@@ -5,7 +5,17 @@ module.exports = doJSON;
 // Take the lexed input, and return a JSON-encoded object
 // A module looks like this: https://gist.github.com/1777387
 
-var marked = require('marked');
+const common = require('./common.js');
+const marked = require('marked');
+
+// customized heading without id attribute
+var renderer = new marked.Renderer();
+renderer.heading = function(text, level) {
+  return '<h' + level + '>' + text + '</h' + level + '>\n';
+};
+marked.setOptions({
+  renderer: renderer
+});
 
 function doJSON(input, filename, cb) {
   var root = {source: filename};
@@ -72,25 +82,27 @@ function doJSON(input, filename, cb) {
 
     // Immediately after a heading, we can expect the following
     //
-    // { type: 'code', text: 'Stability: ...' },
+    // { type: 'blockquote_start' }
+    // { type: 'paragraph', text: 'Stability: ...' },
+    // { type: 'blockquote_end' }
     //
     // a list: starting with list_start, ending with list_end,
     // maybe containing other nested lists in each item.
     //
-    // If one of these isnt' found, then anything that comes between
+    // If one of these isn't found, then anything that comes between
     // here and the next heading should be parsed as the desc.
     var stability;
     if (state === 'AFTERHEADING') {
-      if (type === 'code' &&
-          (stability = text.match(/^Stability: ([0-5])(?:\s*-\s*)?(.*)$/))) {
-        current.stability = parseInt(stability[1], 10);
-        current.stabilityText = stability[2].trim();
+      if (type === 'blockquote_start') {
+        state = 'AFTERHEADING_BLOCKQUOTE';
         return;
       } else if (type === 'list_start' && !tok.ordered) {
         state = 'AFTERHEADING_LIST';
         current.list = current.list || [];
         current.list.push(tok);
         current.list.level = 1;
+      } else if (type === 'html' && common.isYAMLBlock(tok.text)) {
+        current.meta = parseYAML(tok.text);
       } else {
         current.desc = current.desc || [];
         if (!Array.isArray(current.desc)) {
@@ -115,6 +127,20 @@ function doJSON(input, filename, cb) {
         processList(current);
       }
       return;
+    }
+
+    if (state === 'AFTERHEADING_BLOCKQUOTE') {
+      if (type === 'blockquote_end') {
+        state = 'AFTERHEADING';
+        return;
+      }
+
+      if (type === 'paragraph' &&
+          (stability = text.match(/^Stability: ([0-5])(?:\s*-\s*)?(.*)$/))) {
+        current.stability = parseInt(stability[1], 10);
+        current.stabilityText = stability[2].trim();
+        return;
+      }
     }
 
     current.desc = current.desc || [];
@@ -183,7 +209,7 @@ function processList(section) {
   list.forEach(function(tok) {
     var type = tok.type;
     if (type === 'space') return;
-    if (type === 'list_item_start') {
+    if (type === 'list_item_start' || type === 'loose_item_start') {
       var n = {};
       if (!current) {
         values.push(n);
@@ -260,33 +286,53 @@ function processList(section) {
       // event: each item is an argument.
       section.params = values;
       break;
+
+    default:
+      if (section.list.length > 0) {
+        section.desc = section.desc || [];
+        for (var i = 0; i < section.list.length; i++) {
+          section.desc.push(section.list[i]);
+        }
+      }
   }
 
   // section.listParsed = values;
   delete section.list;
 }
 
+function parseYAML(text) {
+  return common.extractAndParseYAML(text);
+}
 
 // textRaw = "someobject.someMethod(a[, b=100][, c])"
 function parseSignature(text, sig) {
   var params = text.match(paramExpr);
   if (!params) return;
   params = params[1];
-  // the [ is irrelevant. ] indicates optionalness.
-  params = params.replace(/\[/g, '');
   params = params.split(/,/);
+  var optionalLevel = 0;
+  var optionalCharDict = {'[': 1, ' ': 0, ']': -1};
   params.forEach(function(p, i, _) {
     p = p.trim();
     if (!p) return;
     var param = sig.params[i];
     var optional = false;
     var def;
-    // [foo] -> optional
-    if (p.charAt(p.length - 1) === ']') {
-      optional = true;
-      p = p.replace(/\]/g, '');
-      p = p.trim();
+
+    // for grouped optional params such as someMethod(a[, b[, c]])
+    var pos;
+    for (pos = 0; pos < p.length; pos++) {
+      if (optionalCharDict[p[pos]] === undefined) { break; }
+      optionalLevel += optionalCharDict[p[pos]];
     }
+    p = p.substring(pos);
+    optional = (optionalLevel > 0);
+    for (pos = p.length - 1; pos >= 0; pos--) {
+      if (optionalCharDict[p[pos]] === undefined) { break; }
+      optionalLevel += optionalCharDict[p[pos]];
+    }
+    p = p.substring(0, pos + 1);
+
     var eq = p.indexOf('=');
     if (eq !== -1) {
       def = p.substr(eq + 1);

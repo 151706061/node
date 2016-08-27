@@ -1,5 +1,5 @@
 'use strict';
-require('../common');
+const common = require('../common');
 var assert = require('assert');
 
 // If everything aligns so that you do a read(n) of exactly the
@@ -32,11 +32,7 @@ r.on('readable', function() {
                 rs.length);
 });
 
-var endEmitted = false;
-r.on('end', function() {
-  endEmitted = true;
-  console.error('end');
-});
+r.on('end', common.mustCall(function() {}));
 
 var pushes = 0;
 function push() {
@@ -49,11 +45,10 @@ function push() {
   }
 
   console.error('   push #%d', pushes);
-  if (r.push(new Buffer(PUSHSIZE)))
+  if (r.push(Buffer.allocUnsafe(PUSHSIZE)))
     setTimeout(push);
 }
 
 process.on('exit', function() {
   assert.equal(pushes, PUSHCOUNT + 1);
-  assert(endEmitted);
 });

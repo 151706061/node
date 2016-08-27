@@ -1,6 +1,13 @@
 'use strict';
 
 const common = require('../common');
+
+if (!common.enoughTestMem) {
+  const skipMessage = 'intensive toString tests due to memory confinements';
+  common.skip(skipMessage);
+  return;
+}
+
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +21,7 @@ const stream = fs.createWriteStream(file, {
 });
 
 const size = kStringMaxLength / 200;
-const a = new Buffer(size).fill('a');
+const a = Buffer.alloc(size, 'a');
 
 for (var i = 0; i < 201; i++) {
   stream.write(a);

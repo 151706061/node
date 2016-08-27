@@ -1,12 +1,12 @@
 'use strict';
-require('../common');
+const common = require('../common');
 var assert = require('assert');
 var Readable = require('_stream_readable');
 
 var len = 0;
 var chunks = new Array(10);
 for (var i = 1; i <= 10; i++) {
-  chunks[i - 1] = new Buffer(i);
+  chunks[i - 1] = Buffer.allocUnsafe(i);
   len += i;
 }
 
@@ -40,14 +40,7 @@ test.read(0);
 function next() {
   // now let's make 'end' happen
   test.removeListener('end', thrower);
-
-  var endEmitted = false;
-  process.on('exit', function() {
-    assert(endEmitted, 'end should be emitted by now');
-  });
-  test.on('end', function() {
-    endEmitted = true;
-  });
+  test.on('end', common.mustCall(function() {}));
 
   // one to get the last byte
   var r = test.read();

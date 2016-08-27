@@ -70,12 +70,6 @@ discover your package as it's listed in `npm search`.
 
 The url to the project homepage.
 
-**NOTE**: This is *not* the same as "url".  If you put a "url" field,
-then the registry will think it's a redirection to your package that has
-been published somewhere else, and spit at you.
-
-Literally.  Spit.  I'm so not kidding.
-
 ## bugs
 
 The url to your project's issue tracker and / or the email address to which
@@ -189,9 +183,10 @@ Certain files are always included, regardless of settings:
 * `README`
 * `CHANGES` / `CHANGELOG` / `HISTORY`
 * `LICENSE` / `LICENCE`
+* `NOTICE`
 * The file in the "main" field
 
-`README`, `CHANGES` & `LICENSE` can have any case and extension.
+`README`, `CHANGES`, `LICENSE` & `NOTICE` can have any case and extension.
 
 Conversely, some files are always ignored:
 
@@ -206,6 +201,8 @@ Conversely, some files are always ignored:
 * `._*`
 * `npm-debug.log`
 * `.npmrc`
+* `node_modules`
+* `config.gypi`
 
 ## main
 
@@ -328,6 +325,11 @@ maybe, someday.
 ### directories.example
 
 Put example scripts in here.  Someday, it might be exposed in some clever way.
+
+### directories.test
+
+Put your tests in here. It is currently not exposed, but it might be in the
+future.
 
 ## repository
 
@@ -573,7 +575,31 @@ this. If you depend on features introduced in 1.5.2, use `">= 1.5.2 < 2"`.
 
 ## bundledDependencies
 
-Array of package names that will be bundled when publishing the package.
+This defines an array of package names that will be bundled when publishing
+the package.
+
+In cases where you need to preserve npm packages locally or have them
+available through a single file download, you can bundle the packages in a
+tarball file by specifying the package names in the `bundledDependencies`
+array and executing `npm pack`.
+
+For example:
+
+If we define a package.json like this:
+
+```
+{
+  "name": "awesome-web-framework",
+  "version": "1.0.0",
+  "bundledDependencies": [
+    'renderized', 'super-streams'
+  ]
+}
+```
+we can obtain `awesome-web-framework-1.0.0.tgz` file by running `npm pack`.
+This file contains the dependencies `renderized` and `super-streams` which
+can be installed in a new project by executing `npm install
+awesome-web-framework-1.0.0.tgz`.
 
 If this is spelled `"bundleDependencies"`, then that is also honored.
 
@@ -625,15 +651,15 @@ are capable of properly installing your program.  For example:
 
     { "engines" : { "npm" : "~1.0.20" } }
 
-Note that, unless the user has set the `engine-strict` config flag, this
-field is advisory only.
+Unless the user has set the `engine-strict` config flag, this
+field is advisory only will produce warnings when your package is installed as a dependency.
 
 ## engineStrict
 
-**This feature was deprecated with npm 3.0.0**
+**This feature was removed in npm 3.0.0**
 
 Prior to npm 3.0.0, this feature was used to treat this package as if the
-user had set `engine-strict`.
+user had set `engine-strict`. It is no longer used.
 
 ## os
 
@@ -707,10 +733,10 @@ npm will default some values based on package contents.
   If there is a `server.js` file in the root of your package, then npm
   will default the `start` command to `node server.js`.
 
-* `"scripts":{"preinstall": "node-gyp rebuild"}`
+* `"scripts":{"install": "node-gyp rebuild"}`
 
-  If there is a `binding.gyp` file in the root of your package, npm will
-  default the `preinstall` command to compile using node-gyp.
+  If there is a `binding.gyp` file in the root of your package and you have not defined an `install` or `preinstall` script, npm will
+  default the `install` command to compile using node-gyp.
 
 * `"contributors": [...]`
 
@@ -727,7 +753,6 @@ npm will default some values based on package contents.
 * npm-config(1)
 * npm-config(7)
 * npm-help(1)
-* npm-faq(7)
 * npm-install(1)
 * npm-publish(1)
 * npm-uninstall(1)
